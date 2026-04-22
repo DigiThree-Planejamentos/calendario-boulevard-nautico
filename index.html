@@ -1447,118 +1447,22 @@ function exportHTML(){
   src=src.replace(/(<span class="sub" contenteditable="true" id="hdrSub"[^>]*>)[^<]*/,`$1${sub}`);
   src=src.replace(/let POSTS = \[[\s\S]*?\];/,`let POSTS = ${JSON.stringify(POSTS)};`);
   src=src.replace(/let PLAN_DATA = \{[\s\S]*?\};/,`let PLAN_DATA = ${JSON.stringify(PLAN_DATA)};`);
-  src = src.replace(/\/\/ __SPECIALS_PATCH__[\s\S]*?\/\/ __END_SPECIALS_PATCH__/, '');
-  const specialsPatch = '';
-  src = src.replace(/\/\/ __SPECIALS_PATCH__[\s\S]*?\/\/ __END_SPECIALS_PATCH__[\s\S]*?\/\/ ── Init ──/, specialsPatch + '\n
-function getSiteData(){
-  return {
-    client: document.getElementById('hdrClient')?.innerText?.trim() || '',
-    year: document.getElementById('hdrYear')?.innerText?.trim() || '',
-    sub: document.getElementById('hdrSub')?.innerText?.trim() || '',
-    posts: POSTS,
-    plan: PLAN_DATA,
-    months: MONTHS_CONFIG
-  };
-}
-
-function applySiteData(data){
-  if(!data) return;
-  if(data.client) document.getElementById('hdrClient').innerText = data.client;
-  if(data.year) document.getElementById('hdrYear').innerText = data.year;
-  if(data.sub) document.getElementById('hdrSub').innerText = data.sub;
-  if(Array.isArray(data.posts)) POSTS = data.posts;
-  if(data.plan && typeof data.plan === 'object') PLAN_DATA = data.plan;
-  if(Array.isArray(data.months)){
-    data.months.forEach((m,i)=>{
-      if(!MONTHS_CONFIG[i] || !m) return;
-      if(typeof m.notes !== 'undefined') MONTHS_CONFIG[i].notes = m.notes || '';
-      if(m.special && typeof m.special === 'object') MONTHS_CONFIG[i].special = m.special;
-    });
-  }
-}
-
-function saveLocalBackup(data){
-  try{ localStorage.setItem(CALENDAR_ID, JSON.stringify(data)); }catch(err){ console.warn('Backup local falhou', err); }
-}
-
-function loadLocalBackup(){
-  try{
-    const raw = localStorage.getItem(CALENDAR_ID);
-    return raw ? JSON.parse(raw) : null;
-  }catch(err){
-    console.warn('Leitura do backup local falhou', err);
-    return null;
-  }
-}
-
-async function saveSiteData(showSuccess = true){
-  const payload = getSiteData();
-  saveLocalBackup(payload);
-
-  if(!supabaseClient){
-    if(showSuccess) showToast('⚠️ Salvo só no navegador');
-    return;
-  }
-
-  try{
-    const { error } = await supabaseClient
-      .from('calendarios')
-      .upsert({ id: CALENDAR_ID, nome: CALENDAR_NAME, dados: payload }, { onConflict: 'id' });
-
-    if(error){
-      console.error(error);
-      showToast('⚠️ Falhou no site, salvo local');
-      return;
-    }
-
-    if(showSuccess) showToast('✅ Salvo no site!');
-  }catch(err){
-    console.error(err);
-    showToast('⚠️ Erro ao salvar no site');
-  }
-}
-
-function scheduleAutosave(){
-  clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(() => { saveSiteData(false); }, 700);
-}
-
-async function loadSiteData(){
-  if(supabaseClient){
-    try{
-      const { data, error } = await supabaseClient
-        .from('calendarios')
-        .select('dados')
-        .eq('id', CALENDAR_ID)
-        .maybeSingle();
-      if(!error && data && data.dados){
-        applySiteData(data.dados);
-        return;
-      }
-    }catch(err){
-      console.warn('Erro ao carregar do Supabase', err);
-    }
-  }
-
-  const local = loadLocalBackup();
-  if(local) applySiteData(local);
-}
-
-// ── Init ──');
   const slug=(client||'cliente').toLowerCase().replace(/\s+/g,'-');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([src],{type:'text/html'}));
-  a.download=`calendario_editorial_${slug}_${year}.html`;a.click();
-  showToast('💾 HTML salvo com todas as edições e imagens!');
+  a.download=`calendario_editorial_${slug}_${year}.html`;
+  a.click();
+  showToast('💾 HTML salvo com todas as edições!');
 }
 
 function showToast(msg){
-  const t=document.getElementById('toast');t.textContent=msg;
-  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
 }
 
 document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
-
 
 function getSiteData(){
   return {
